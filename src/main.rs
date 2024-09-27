@@ -105,6 +105,7 @@ fn send_to_redis(
         "afterblocks": afterblocks,
         "timestamp": unix_timestamp,
     });
+    log::info!("wasm info: {wasm_info}");
 
     // Create a message
     let message = InputOutputObject {
