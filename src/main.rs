@@ -20,6 +20,8 @@ pub struct InputOutputObject {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    env_logger::init();
+
     let matches = App::new("ef-cli")
         .version("1.0")
         .author("Mike Tang")
@@ -111,9 +113,9 @@ fn send_to_redis(
     let message = InputOutputObject {
         proto,
         model: wasm_info.to_string(),
-        action: "deploy_wasm".to_string(),
-        data: file_content,
-        ext: Vec::new(),
+        action: "upload_wasm".to_string(),
+        data: Vec::new(),
+        ext: file_content,
     };
 
     // Serialize the message to JSON
