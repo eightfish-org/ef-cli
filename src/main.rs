@@ -2,7 +2,7 @@ use clap::{App, Arg};
 use hex;
 use redis::{Client, Commands};
 use serde::{Deserialize, Serialize};
-use serde_json;
+use serde_json::json;
 use sha2::{Digest, Sha256};
 use std::fs::File;
 use std::io::Read;
@@ -65,7 +65,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // calculate digest
                 let digest = calculate_digest(&file_content);
                 // send to redis
-                send_to_redis(proto, version, file_content, digest, 3600)
+                send_to_redis(proto, version, file_content, digest, 10)
                     .expect("error sending msg to redis channel.")
             }
 
@@ -100,29 +100,36 @@ fn send_to_redis(
         .as_secs();
     println!("Unix Timestamp: {}", unix_timestamp);
 
-    let wasm_info = serde_json::json!({
-        "proto": proto.clone(),
-        "version": version,
-        "digest": digest,
+    // let wasm_info = serde_json::json!({
+    //     "proto": proto.clone(),
+    //     "version": version,
+    //     "digest": digest,
+    //     "afterblocks": afterblocks,
+    //     "timestamp": unix_timestamp,
+    // });
+    // log::info!("wasm info: {wasm_info}");
+
+    let payload = serde_json::to_vec(&json!({
+        "wasm_file": file_content,
+        "sql_file": "",
         "afterblocks": afterblocks,
-        "timestamp": unix_timestamp,
-    });
-    log::info!("wasm info: {wasm_info}");
+    }))
+    .unwrap();
 
     // Create a message
     let message = InputOutputObject {
         proto,
-        model: wasm_info.to_string(),
+        model: "".to_string(),
         action: "upload_wasm".to_string(),
-        data: Vec::new(),
-        ext: file_content,
+        data: payload,
+        ext: Vec::new(),
     };
 
     // Serialize the message to JSON
-    let json_string = serde_json::to_string(&message).unwrap();
+    let json_vec = serde_json::to_vec(&message).unwrap();
 
     // Publish the JSON string to a Redis channel
-    let result: i32 = con.publish(CHANNEL_ADMIN2VIN, json_string)?;
+    let result: i32 = con.publish(CHANNEL_ADMIN2VIN, json_vec)?;
 
     println!("Message published to {} recipients", result);
 
