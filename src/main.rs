@@ -34,13 +34,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("version")
-                .long("version")
-                .value_name("VERSION")
-                .help("Sets the version")
-                .takes_value(true),
-        )
-        .arg(
             Arg::with_name("file")
                 .long("file")
                 .value_name("FILE")
@@ -51,10 +44,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Handle the 'proto' argument
     let proto = matches.value_of("proto").expect("missing proto").to_owned();
-    let version = matches
-        .value_of("version")
-        .expect("missing version")
-        .to_owned();
 
     // Handle the 'file' argument
     if let Some(file_path) = matches.value_of("file") {
@@ -65,7 +54,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // calculate digest
                 let digest = calculate_digest(&file_content);
                 // send to redis
-                send_to_redis(proto, version, file_content, digest, 10)
+                send_to_redis(proto, file_content, digest, 10)
                     .expect("error sending msg to redis channel.")
             }
 
@@ -85,7 +74,6 @@ fn calculate_digest(binary_data: &[u8]) -> String {
 
 fn send_to_redis(
     proto: String,
-    version: String,
     file_content: Vec<u8>,
     digest: String,
     afterblocks: usize,
@@ -100,19 +88,10 @@ fn send_to_redis(
         .as_secs();
     println!("Unix Timestamp: {}", unix_timestamp);
 
-    // let wasm_info = serde_json::json!({
-    //     "proto": proto.clone(),
-    //     "version": version,
-    //     "digest": digest,
-    //     "afterblocks": afterblocks,
-    //     "timestamp": unix_timestamp,
-    // });
-    // log::info!("wasm info: {wasm_info}");
-
-    let payload = serde_json::to_vec(&json!({
-        "wasm_file": file_content,
+    let extinfo = serde_json::to_vec(&json!({
         "sql_file": "",
         "afterblocks": afterblocks,
+        "digest": digest,
     }))
     .unwrap();
 
@@ -121,15 +100,15 @@ fn send_to_redis(
         proto,
         model: "".to_string(),
         action: "upload_wasm".to_string(),
-        data: payload,
-        ext: Vec::new(),
+        data: file_content,
+        ext: extinfo,
     };
 
     // Serialize the message to JSON
     let json_vec = serde_json::to_vec(&message).unwrap();
 
     // Publish the JSON string to a Redis channel
-    let result: i32 = con.publish(CHANNEL_ADMIN2VIN, json_vec)?;
+    let result: i32 = con.publish(CHANNEL_ADMIN2VIN, &json_vec)?;
 
     println!("Message published to {} recipients", result);
 
