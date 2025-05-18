@@ -88,7 +88,8 @@ fn send_to_redis(
         .as_secs();
     println!("Unix Timestamp: {}", unix_timestamp);
 
-    let extinfo = serde_json::to_vec(&json!({
+    let payload = serde_json::to_vec(&json!({
+        "wasm_file": file_content,
         "sql_file": "",
         "afterblocks": afterblocks,
         "digest": digest,
@@ -100,8 +101,8 @@ fn send_to_redis(
         proto,
         model: "".to_string(),
         action: "upload_wasm".to_string(),
-        data: file_content,
-        ext: extinfo,
+        data: payload,
+        ext: Vec::new(),
     };
 
     // Serialize the message to JSON
