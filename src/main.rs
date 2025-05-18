@@ -107,6 +107,7 @@ fn send_to_redis(
 
     // Serialize the message to JSON
     let json_vec = serde_json::to_vec(&message).unwrap();
+    println!("json_vec size: {}", json_vec.len());
 
     // Publish the JSON string to a Redis channel
     let result: i32 = con.publish(CHANNEL_ADMIN2VIN, &json_vec)?;
